@@ -1,0 +1,22 @@
+[tool.poetry]
+name = "dither"
+version = "0.1.0"
+description = "Modern bi-level, digital halftoning algorithms in Python"
+authors = ["dalpil <47555+dalpil@users.noreply.github.com>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+click = "^8.1.3"
+numba = "^0.60.0"
+numpy = "^1.26.4"
+scikit-image = "^0.24.0"
+Pillow = "^10.4.0"
+
+[tool.poetry.scripts]
+dither = 'dither:cli'
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
