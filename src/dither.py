@@ -10,6 +10,7 @@ import numba
 import numpy as np
 import scipy
 import skimage
+from skimage.filters import gaussian
 
 
 DITHER_KERNELS = {
@@ -145,6 +146,59 @@ DITHER_KERNELS = {
 }
 
 
+# This function has been lifted from https://github.com/laszlokorte/blue-noise with some minor adjustments from my side
+def generate_bluenoise(shape, initial_ratio=0.1, sigma=1.5):
+    ranks = np.zeros(shape)
+
+    initial_white_noise = np.random.random_sample(shape)
+    placed_pixels = initial_white_noise <= initial_ratio
+    count_placed = np.sum(placed_pixels)
+    count_remaining = placed_pixels.size - count_placed
+
+    prev_swap = None
+
+    # Phase 1: Place intial
+    while True:
+        blurred = gaussian(placed_pixels, sigma, mode='wrap')
+        densest = (blurred * placed_pixels).argmax()
+        voidest = (blurred + placed_pixels).argmin()
+
+        if prev_swap == (voidest, densest):
+            break
+
+        densest_coord = np.unravel_index(densest, shape)
+        voidest_coord = np.unravel_index(voidest, shape)
+
+        placed_pixels[densest_coord] = False
+        placed_pixels[voidest_coord] = True
+
+        prev_swap = (densest, voidest)
+
+    # Phase 2: Rank pixels by density
+    placed_but_not_ranked = placed_pixels.copy()
+
+    for rank in range(count_placed, 0, -1):
+        blurred = gaussian(placed_pixels, sigma, mode='wrap')
+
+        densest = (blurred * placed_but_not_ranked).argmax()
+        densest_coord = np.unravel_index(densest, shape)
+
+        placed_but_not_ranked[densest_coord] = False
+        ranks[densest_coord] = rank
+
+    # Phase 3: Fill up remaining pixels from the sparsest areas
+    for rank in range(count_remaining):
+        blurred = gaussian(placed_pixels, sigma, mode='wrap')
+
+        voidest = (blurred + placed_pixels).argmin()
+        voidest_coord = np.unravel_index(voidest, shape)
+
+        placed_pixels[voidest_coord] = True
+        ranks[voidest_coord] = count_placed + rank
+
+    return ranks
+
+
 @numba.jit(nopython=True)
 def dither_threshold(input, threshold, noise):
     output = np.zeros_like(input)
@@ -165,6 +219,21 @@ def dither_whitenoise(input):
     for y in range(height):
         for x in range(width):
             output[y, x] = 0.0 if input[y, x] < np.random.uniform(0.0, 1.0) else 1.0
+
+    return output
+
+
+def dither_bluenoise(input, noise_shape):
+    bnr = generate_bluenoise(noise_shape)
+    bn = np.array(bnr / bnr.max())
+
+    bnh, bnw = noise_shape
+    output = np.zeros_like(input)
+
+    height, width = input.shape
+    for y in range(height):
+        for x in range(width):
+            output[y, x] = 0.0 if input[y, x] < bn[y % bnh, x % bnw] else 1.0
 
     return output
 
@@ -1243,6 +1312,13 @@ def threshold(input, threshold, noise):
 @click.pass_obj
 def whitenoise(input):
     return dither_whitenoise(input)
+
+
+@cli.command(help='Blue noise thresholding')
+@click.option('--noise-shape', type=(int, int), default=(64, 64))
+@click.pass_obj
+def bluenoise(input, noise_shape):
+    return dither_bluenoise(input, noise_shape)
 
 
 @cli.command(help='Ordered dithering by Bayer matrices')
