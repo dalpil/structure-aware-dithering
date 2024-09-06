@@ -254,15 +254,16 @@ Average run-time of 10 runs on the same input image, in seconds.
 
 ### Installation instructions
 
-    poetry shell
-    poetry install
+    git clone https://github.com/dalpil/structure-aware-dithering
+    cd structure-aware-dithering
+    uv run dither
 
 
 ### Example usage
 
-    dither --resize-width 512 input.png output.png classic --kernel atkinson
-    dither input.png output.png zhangpang --c 0.0065
-    dither --resize-width 512 input.png output.png contrast-aware-variant
+    uv run dither --resize-width 512 input.png output.png classic --kernel atkinson
+    uv run dither input.png output.png zhangpang --c 0.0065
+    uv run dither --resize-width 512 input.png output.png contrast-aware-variant
 
 
 ## References
