@@ -43,12 +43,12 @@ My primary use case for implementing these algorithms has been thermal printing,
 **Floyd-Steinberg to the left, a structure-aware algorithm on the right**
 
 ![ribbon-floyd-steinberg](./examples/ribbon-floyd-steinberg.png)
-![ribbon-contrast-aware-variant](./examples/ribbon-contrast-aware-variant.png)
+![ribbon-entropy-constrained-zhoufang](./examples/ribbon-entropy-constrained-zhoufang.png)
 
 **These commands were used to generate the images above**
 
     dither examples/ribbon-original.png examples/ribbon-floyd-steinberg.png classic
-    dither examples/ribbon-original.png examples/ribbon-contrast-aware-variant.png contrast-aware-variant
+    dither examples/ribbon-original.png examples/ribbon-contrast-aware-variant.png entropy-constrained-zhoufang
 
 
 ### Cat
