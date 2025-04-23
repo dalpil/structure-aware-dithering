@@ -265,6 +265,31 @@ Average run-time of 10 runs on the same input image, in seconds.
     uv run dither input.png output.png zhangpang --c 0.0065
     uv run dither --resize-width 512 input.png output.png contrast-aware-variant
 
+## More example images
+
+### Original and Floyd-Steinberg
+| Original | Floyd-Steinberg |
+|----------|-----------------|
+|![david](https://github.com/user-attachments/assets/1b6b0f08-a430-47fd-874e-2d36181ecf14)|![output](https://github.com/user-attachments/assets/7273008b-1b42-47b7-949d-333bebbef5ef)|
+
+### Structure-aware algorithms
+
+| Contrast-Aware Basic | Contrast-Aware Variant|
+|----------------------|-----------------------|
+|![output](https://github.com/user-attachments/assets/05946409-4d52-44a8-b5f8-50155472ff68)|![output](https://github.com/user-attachments/assets/e2488afa-7fe2-4d85-ba57-737bdfeb9554)|
+
+| Entropy-Constrained | Entropy-Constrained Ostromoukhov |
+|---------------------|----------------------------------|
+|![output](https://github.com/user-attachments/assets/365bafa2-9e6f-410d-9f10-40a0f52f21c1)|![output](https://github.com/user-attachments/assets/55e77f28-df0a-4fac-af87-afea67c81742)|
+
+| Entropy-Constrained Zhou-Fang | Laplacian |
+|-------------------------------|-----------|
+|![output](https://github.com/user-attachments/assets/81a5444b-f8d3-42b1-8fa7-f70a959285b4)|![output](https://github.com/user-attachments/assets/4d46d2f7-99b2-4c91-9525-40d195a6d744)|
+
+| Visual Difference | Zhang-Pang |
+|-------------------|------------|
+|![output](https://github.com/user-attachments/assets/d1dd6274-dcb8-4d82-aad6-3d4d70244242)|![output](https://github.com/user-attachments/assets/5f345bf9-8cdd-4042-9751-950cc9f73ef0)|
+
 
 ## References
 
