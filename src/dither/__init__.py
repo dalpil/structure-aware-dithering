@@ -1487,47 +1487,31 @@ def zhangpang(input, c):
 @cli.command()
 @click.option('--kernel', type=click.Choice(DITHER_KERNELS.keys()), default='floyd-steinberg')
 @click.option('--serpentine/--no-serpentine', default=False)
-@click.option('--gaussian-implementation', type=click.Choice(['skimage', 'scipy']), default='skimage', help='skimage gives a smoother result with less contrast increase, scipy is probably more true to the paper since it is a 3x3 filter')
-@click.option('-c', default=7.6, type=float, help='7.6 and 16.4 are mentioned in , the paper')
+@click.option('-c', default=7.6, type=float, help='7.6 and 16.4 are mentioned in the paper')
 @click.pass_obj
-def entropy_constrained(input, kernel, serpentine, gaussian_implementation, c, **kwargs):
-    if gaussian_implementation == 'skimage':
-        input_lowpass = skimage.filters.gaussian(input, sigma=1.0)
-
-    if gaussian_implementation == 'scipy':
-        input_lowpass = scipy.ndimage.gaussian_filter(input, 3)
-
-    # TODO: Why do we have to invert this? Have I misunderstood something? The paper doesn't do this as far as I can see
-    input_highpass = -1 * (input - input_lowpass)
+def entropy_constrained(input, kernel, serpentine, c, **kwargs):
+    input_lowpass = skimage.filters.gaussian(input, sigma=1.0)
+    input_highpass = input_lowpass - input
 
     return dither_entropy_constrained(input, input_highpass, c, DITHER_KERNELS[kernel], serpentine)
 
 
 @cli.command()
 @click.option('--kernel', type=click.Choice(DITHER_KERNELS.keys()), default='floyd-steinberg')
-@click.option('--gaussian-implementation', type=click.Choice(['skimage', 'scipy']), default='skimage', help='skimage gives a smoother result with less contrast increase, scipy is probably more true to the paper since it is a 3x3 filter')
-@click.option('-c', default=7.6, type=float, help='7.6 and 16.4 are mentioned in , the paper')
+@click.option('-c', default=7.6, type=float, help='7.6 and 16.4 are mentioned in the paper')
 @click.pass_obj
-def entropy_constrained_ostromoukhov(input, kernel, gaussian_implementation, c, **kwargs):
-    if gaussian_implementation == 'skimage':
-        input_lowpass = skimage.filters.gaussian(input, sigma=1.0)
-
-    # This is probably more true to the paper since it explicitly mentions 3x3 filters
-    if gaussian_implementation == 'scipy':
-        input_lowpass = scipy.ndimage.gaussian_filter(input, 3)
-
-    # TODO: Why do we have to invert this? Have I misunderstood something? The paper doesn't do this as far as I can see
-    input_highpass = -1 * (input - input_lowpass)
+def entropy_constrained_ostromoukhov(input, kernel, c, **kwargs):
+    input_lowpass = skimage.filters.gaussian(input, sigma=1.0)
+    input_highpass = input_lowpass - input
 
     return dither_entropy_constrained_ostromoukhov(input, input_highpass, c)
 
 
 @cli.command()
 @click.option('--kernel', type=click.Choice(DITHER_KERNELS.keys()), default='floyd-steinberg')
-@click.option('--gaussian-implementation', type=click.Choice(['skimage', 'scipy']), default='skimage', help='skimage gives a smoother result with less contrast increase, scipy is probably more true to the paper since it is a 3x3 filter')
-@click.option('-c', default=7.6, type=float, help='7.6 and 16.4 are mentioned in , the paper')
+@click.option('-c', default=7.6, type=float, help='7.6 and 16.4 are mentioned in the paper')
 @click.pass_obj
-def entropy_constrained_zhoufang(input, kernel, gaussian_implementation, c, **kwargs):
+def entropy_constrained_zhoufang(input, kernel, c, **kwargs):
     def interpolate_and_mirror(key_levels):
         result = None
         key_prev, value_prev = key_levels[0]
@@ -1585,15 +1569,8 @@ def entropy_constrained_zhoufang(input, kernel, gaussian_implementation, c, **kw
 
     modulator = interpolate_and_mirror(modulator_key_values)
 
-    if gaussian_implementation == 'skimage':
-        input_lowpass = skimage.filters.gaussian(input, sigma=1.0)
-
-    # This is probably more true to the paper since it explicitly mentions 3x3 filters
-    if gaussian_implementation == 'scipy':
-        input_lowpass = scipy.ndimage.gaussian_filter(input, 3)
-
-    # TODO: Why do we have to invert this? Have I misunderstood something? The paper doesn't do this as far as I can see
-    input_highpass = -1 * (input - input_lowpass)
+    input_lowpass = skimage.filters.gaussian(input, sigma=1.0)
+    input_highpass = input_lowpass - input
 
     return dither_entropy_constrained_zhoufang(input, coefficients, modulator, input_highpass, c)
 
