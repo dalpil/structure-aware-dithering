@@ -241,7 +241,7 @@ def dither_whitenoise(input):
 
 def dither_bluenoise(input, noise_shape):
     bnr = generate_bluenoise(noise_shape)
-    bn = np.array(bnr / bnr.max())
+    bn = (bnr - bnr.min()) / (bnr.max() - bnr.min())
 
     bnh, bnw = noise_shape
     output = np.zeros_like(input)
