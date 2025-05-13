@@ -1217,7 +1217,6 @@ def cli(ctx, input, resize_width, resize_resample, duplicate_first_rows_and_cols
         input_image = input_image.resize((int(input_image.width * ratio), int(input_image.height * ratio)), resample=resample_algorithm)
 
     grayscale_image = input_image.convert('L')
-    grayscale_image.save('output-grayscale.png')
 
     # Increasing Contrast/Sharpness might improve the legibility of smaller images
     # This will also reduce "fuzzyness" at the edges when dealing with logos and such
