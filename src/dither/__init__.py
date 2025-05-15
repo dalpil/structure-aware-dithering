@@ -302,6 +302,125 @@ def dither_classic(original, diff_map, serpentine, k=0.0, noise_multiplier=0.0):
 
     return output
 
+# An error diffusion algorithm with output position constraints for homogenous highlight and shadow dot distribution
+# DOI: https://doi.org/10.1117/12.298297
+def dither_marcu(original, diff_map, serpentine, threshold2):
+    def generate_half_circle(radius):
+        positions = []
+
+        for y in range(-radius, radius + 1):
+            for x in range(-radius, radius + 1):
+                distance = math.sqrt(x**2 + y**2)
+                if distance <= radius:
+                    if y >= 0:
+                        positions.append((x, y))
+
+        # Sort by distance, then angle for tie-breaking
+        positions.sort(key=lambda p: (p[0]**2 + p[1]**2, -math.atan2(p[1], p[0])))
+
+        return positions
+
+    input = original.copy()
+    output = np.zeros_like(input)
+
+    direction = 1
+    height, width = input.shape
+
+    lut1 = generate_half_circle(10) # Generate circular roadmap
+
+    # Build roadmap length table
+    lut2 = [0, 148, 111, 92, 79, 70, 63, 57, 52, 48, 44, 41, 38, 35, 32, 30, 28, 26, 24, 22, 20, 19, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1]
+    lut2 = lut2 + [0] * 178 + list(reversed(lut2))
+
+    threshold1 = 0.5 # Quantization threshold
+
+    for y in range(height):
+        for x in range(0, width, direction) if direction > 0 else range(width - 1, -1, direction):
+            old_pixel = input[y, x]
+            new_pixel = 0.0 if old_pixel < threshold1 else 1.0
+
+            # If we want to put a white dot in a shadow area
+            if original[y, x] < 0.0 + threshold2 + np.random.uniform(-threshold2, threshold2) and new_pixel == 1.0:
+                vdot = 1
+                roadmap_steps = lut2[int(np.clip(original[y, x], 0.0, 1.0) * 255)]
+
+                for i in range(roadmap_steps):
+                    dx, dy = lut1[i]
+
+                    # Do not look at unprocessed pixels
+                    if direction == 1:
+                        if dy == 0 and dx > 0:
+                            continue
+                    else:
+                        if dy == 0 and dx < 0:
+                            continue
+
+                    # Do not look at current pixel
+                    if dy == 0 and dx == 0:
+                        continue
+
+                    if x + dx > 0 and x + dx < width and y - dy > 0:
+                        if output[y - dy, x + dx] == 1.0:
+                            # White pixel found within roadmap
+                            vdot = 0
+                            break
+
+                if vdot == 1:
+                    output[y, x] = 1
+                else:
+                    output[y, x] = 0
+
+            # If we want to put a black dot in a highlight area
+            elif original[y, x] > 1.0 - threshold2 + np.random.uniform(-threshold2, threshold2) and new_pixel == 0.0:
+                vdot = 1
+                roadmap_steps = lut2[int(np.clip(original[y, x], 0.0, 1.0) * 255)]
+
+                for i in range(roadmap_steps):
+                    dx, dy = lut1[i]
+
+                    # Do not look at unprocessed pixels
+                    if direction == 1:
+                        if dy == 0 and dx > 0:
+                            continue
+                    else:
+                        if dy == 0 and dx < 0:
+                            continue
+
+                    # Do not look at current pixel
+                    if dy == 0 and dx == 0:
+                        continue
+
+                    if x + dx > 0 and x + dx < width and y - dy > 0:
+                        if output[y - dy, x + dx] == 0.0:
+                            # Black pixel found within roadmap
+                            vdot = 0
+                            break
+
+                if vdot == 1:
+                    output[y, x] = 0
+                else:
+                    output[y, x] = 1
+
+            else:
+                output[y, x] = new_pixel
+
+            quantization_error = old_pixel - output[y, x]
+
+            for dx, dy, diffusion_coefficient in diff_map:
+                if direction < 0:
+                    dx *= -1
+
+                xn, yn = x + dx, y + dy
+
+                if (0 <= xn < width) and (0 <= yn < height):
+                    # Some kernels use negative coefficients, so we cannot clamp this value between 0.0-1.0
+                    input[yn, xn] = input[yn, xn] + (quantization_error * diffusion_coefficient)
+
+            if serpentine and ((direction > 0 and x >= (width - 1)) or (direction < 0 and x <= 0)):
+                direction *= -1
+
+    return output
+
 
 @numba.jit(nopython=True)
 def dither_classic_modulated(input, diff_map):
@@ -1366,6 +1485,13 @@ def bayer(input, matrix_size):
 def classic(input, kernel, serpentine, k, noise_multiplier, **kwargs):
     return dither_classic(input, DITHER_KERNELS[kernel], serpentine, k, noise_multiplier)
 
+@cli.command(help='Marcu roadmap dithering')
+@click.option('--kernel', type=click.Choice(DITHER_KERNELS.keys()), default='floyd-steinberg')
+@click.option('--serpentine/--no-serpentine', default=True)
+@click.option('--threshold2', default=0.1)
+@click.pass_obj
+def marcu(input, kernel, serpentine, threshold2):
+    return dither_marcu(input, DITHER_KERNELS[kernel], serpentine, threshold2)
 
 @cli.command(help='A simple and efficient error diffusion algorithm')
 @click.pass_obj
