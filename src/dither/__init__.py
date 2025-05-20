@@ -302,10 +302,19 @@ def dither_classic(original, diff_map, serpentine, k=0.0, noise_multiplier=0.0):
 
     return output
 
+
 # An error diffusion algorithm with output position constraints for homogenous highlight and shadow dot distribution
 # DOI: https://doi.org/10.1117/12.298297
-def dither_marcu(original, diff_map, serpentine, threshold2):
-    def generate_half_circle(radius):
+def dither_marcu(original, diff_map, serpentine, threshold2, roadmap, noise):
+    def gen_triangular(height):
+        positions = []
+        for i in range(0, height + 1):
+            for x in range(-i, i + 1):
+                y = i - abs(x)
+                positions.append((x, y))
+        return positions
+
+    def gen_circular(radius):
         positions = []
 
         for y in range(-radius, radius + 1):
@@ -326,9 +335,12 @@ def dither_marcu(original, diff_map, serpentine, threshold2):
     direction = 1
     height, width = input.shape
 
-    lut1 = generate_half_circle(10) # Generate circular roadmap
+    if roadmap == 'circular':
+        lut1 = gen_circular(10)
 
-    # Build roadmap length table
+    if roadmap == 'triangular':
+        lut1 = gen_triangular(15)
+
     lut2 = [0, 148, 111, 92, 79, 70, 63, 57, 52, 48, 44, 41, 38, 35, 32, 30, 28, 26, 24, 22, 20, 19, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1]
     lut2 = lut2 + [0] * 178 + list(reversed(lut2))
 
@@ -340,9 +352,9 @@ def dither_marcu(original, diff_map, serpentine, threshold2):
             new_pixel = 0.0 if old_pixel < threshold1 else 1.0
 
             # If we want to put a white dot in a shadow area
-            if original[y, x] < 0.0 + threshold2 + np.random.uniform(-threshold2, threshold2) and new_pixel == 1.0:
+            if original[y, x] < 0.0 + threshold2 + np.random.uniform(0.0, noise) and new_pixel == 1.0:
                 vdot = 1
-                roadmap_steps = lut2[int(np.clip(original[y, x], 0.0, 1.0) * 255)]
+                roadmap_steps = lut2[int(original[y, x] * 255)]
 
                 for i in range(roadmap_steps):
                     dx, dy = lut1[i]
@@ -371,9 +383,9 @@ def dither_marcu(original, diff_map, serpentine, threshold2):
                     output[y, x] = 0
 
             # If we want to put a black dot in a highlight area
-            elif original[y, x] > 1.0 - threshold2 + np.random.uniform(-threshold2, threshold2) and new_pixel == 0.0:
+            elif original[y, x] > 1.0 - threshold2 - np.random.uniform(0.0, noise) and new_pixel == 0.0:
                 vdot = 1
-                roadmap_steps = lut2[int(np.clip(original[y, x], 0.0, 1.0) * 255)]
+                roadmap_steps = lut2[int(original[y, x] * 255)]
 
                 for i in range(roadmap_steps):
                     dx, dy = lut1[i]
@@ -404,7 +416,8 @@ def dither_marcu(original, diff_map, serpentine, threshold2):
             else:
                 output[y, x] = new_pixel
 
-            quantization_error = old_pixel - output[y, x]
+            # Getting really odd artifacts with the circular pattern unless i clip this. Why?
+            quantization_error = np.clip(old_pixel - output[y, x], -0.5, 0.5)
 
             for dx, dy, diffusion_coefficient in diff_map:
                 if direction < 0:
@@ -1487,11 +1500,13 @@ def classic(input, kernel, serpentine, k, noise_multiplier, **kwargs):
 
 @cli.command(help='Marcu roadmap dithering')
 @click.option('--kernel', type=click.Choice(DITHER_KERNELS.keys()), default='floyd-steinberg')
-@click.option('--serpentine/--no-serpentine', default=True)
+@click.option('--serpentine/--no-serpentine', default=False)
 @click.option('--threshold2', default=0.1)
+@click.option('--roadmap', type=click.Choice(['circular', 'triangular']), default='triangular')
+@click.option('--noise', default=0.0)
 @click.pass_obj
-def marcu(input, kernel, serpentine, threshold2):
-    return dither_marcu(input, DITHER_KERNELS[kernel], serpentine, threshold2)
+def marcu(input, kernel, serpentine, threshold2, roadmap, noise):
+    return dither_marcu(input, DITHER_KERNELS[kernel], serpentine, threshold2, roadmap, noise)
 
 @cli.command(help='A simple and efficient error diffusion algorithm')
 @click.pass_obj
