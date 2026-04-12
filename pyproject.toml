@@ -7,13 +7,13 @@ authors = [
 ]
 license = "MIT"
 readme = "README.md"
-requires-python = ">=3.12,<3.13"
+requires-python = ">=3.11,<3.15"
 dependencies = [
-    "click>=8.1.7",
-    "numba>=0.60.0",
-    "numpy>=2.0.2",
-    "pillow>=10.4.0",
-    "scikit-image",
+    "click>=8.3.2",
+    "numba>=0.65.0",
+    "numpy>=2.4.0",
+    "pillow>=12.2.0",
+    "scikit-image>=0.26",
 ]
 
 [project.scripts]
